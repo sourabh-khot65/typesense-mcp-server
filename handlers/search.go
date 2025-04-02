@@ -46,11 +46,7 @@ func (h *SearchHandler) HandleSearch(ctx context.Context, request mcp.CallToolRe
 	// Perform search using Typesense
 	response, err := h.typesenseService.Search(ctx, &searchReq)
 	if err != nil {
-		// Fallback to Tacitbase if Typesense is unavailable
-		response, err = h.tacitbaseService.Search(ctx, &searchReq)
-		if err != nil {
-			return nil, fmt.Errorf("search failed: %v", err)
-		}
+		return nil, fmt.Errorf("search failed: %v", err)
 	}
 
 	return mcp.NewToolResultText(FormatSearchResults(response)), nil
@@ -154,11 +150,7 @@ func (h *SearchHandler) HandleAttachmentsSearch(ctx context.Context, request mcp
 	// Perform search using Typesense
 	response, err := h.typesenseService.Search(ctx, &searchReq)
 	if err != nil {
-		// Fallback to Tacitbase if Typesense is unavailable
-		response, err = h.tacitbaseService.Search(ctx, &searchReq)
-		if err != nil {
-			return nil, fmt.Errorf("attachments search failed: %v", err)
-		}
+		return nil, fmt.Errorf("attachments search failed: %v", err)
 	}
 
 	return mcp.NewToolResultText(FormatSearchResults(response)), nil

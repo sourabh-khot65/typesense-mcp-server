@@ -16,7 +16,6 @@ import (
 // TacitbaseService defines the interface for Tacitbase operations
 type TacitbaseService interface {
 	SearchCandidates(ctx context.Context, req models.SearchRequest) (*models.SearchResponse, error)
-	Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error)
 }
 
 // tacitbaseService implements the TacitbaseService interface
@@ -156,14 +155,4 @@ func getStringSlice(m map[string]interface{}, key string) []string {
 		}
 	}
 	return []string{}
-}
-
-func (s *tacitbaseService) Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error) {
-	// For now, return an empty response since we're using Typesense as the primary search engine
-	return &models.SearchResponse{
-		Found:   0,
-		Page:    request.Page,
-		PerPage: request.PerPage,
-		Hits:    make([]map[string]interface{}, 0),
-	}, nil
 }
