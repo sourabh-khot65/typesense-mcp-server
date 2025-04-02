@@ -11,6 +11,7 @@ The project follows a clean, modular architecture:
 ├── models/      # Data structures and types
 ├── services/    # Business logic and external service interactions
 ├── handlers/    # Request handlers and routing logic
+├── tools/       # Tool registration and configuration
 ├── main.go      # Application entry point
 └── README.md    # Project documentation
 ```
@@ -20,6 +21,7 @@ The project follows a clean, modular architecture:
 - `models`: Contains all data structures and types used across the application
 - `services`: Implements the business logic and external service interactions
 - `handlers`: Contains the request handlers that process incoming requests
+- `tools`: Registers the tools available for searching candidates
 
 ## Features
 
@@ -27,6 +29,7 @@ The project follows a clean, modular architecture:
 - Vector search for similarity-based matching
 - Semantic search with natural language understanding
 - Fallback to Tacitbase's native search when needed
+- Tool registration for searching candidates
 
 ## Search Tools
 
