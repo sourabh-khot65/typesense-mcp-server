@@ -15,7 +15,7 @@ import (
 
 // TacitbaseService defines the interface for Tacitbase operations
 type TacitbaseService interface {
-	SearchCandidates(ctx context.Context, req models.SearchRequest) (*models.SearchResponse, error)
+	Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error)
 }
 
 // tacitbaseService implements the TacitbaseService interface
@@ -32,21 +32,16 @@ func NewTacitbaseService() TacitbaseService {
 	}
 }
 
-// SearchCandidates searches for candidates based on the provided criteria
-func (s *tacitbaseService) SearchCandidates(ctx context.Context, req models.SearchRequest) (*models.SearchResponse, error) {
-	// Set default collection if not specified
-	if req.Collection == "" {
-		req.Collection = "candidates_candidates"
-	}
-
+// Search performs a search operation using Tacitbase's API
+func (s *tacitbaseService) Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error) {
 	// Convert request to JSON
-	jsonData, err := json.Marshal(req)
+	jsonData, err := json.Marshal(request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/search/documents/find/candidates", s.baseURL)
+	url := fmt.Sprintf("%s/search/documents/find/%s", s.baseURL, request.Collection)
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)

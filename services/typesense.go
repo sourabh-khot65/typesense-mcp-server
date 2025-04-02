@@ -14,8 +14,6 @@ import (
 
 type TypesenseService interface {
 	Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error)
-	VectorSearch(ctx context.Context, request *models.VectorSearchRequest) (*models.SearchResponse, error)
-	SemanticSearch(ctx context.Context, request *models.SemanticSearchRequest) (*models.SearchResponse, error)
 }
 
 type typesenseService struct {
@@ -48,54 +46,6 @@ func (s *typesenseService) Search(ctx context.Context, request *models.SearchReq
 	result, err := s.client.Collection(request.Collection).Documents().Search(searchParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search documents: %v", err)
-	}
-
-	return convertToSearchResponse(result)
-}
-
-func (s *typesenseService) VectorSearch(ctx context.Context, request *models.VectorSearchRequest) (*models.SearchResponse, error) {
-	// Convert parameters to required types
-	filterBy := strings.Join(request.FilterFields, " && ")
-	sortBy := strings.Join(request.SortBy, ",")
-	page := request.Page
-	perPage := request.PerPage
-
-	searchParams := &api.SearchCollectionParams{
-		Q:        request.VectorQuery,
-		QueryBy:  strings.Join(request.SearchFields, ","),
-		FilterBy: &filterBy,
-		SortBy:   &sortBy,
-		Page:     &page,
-		PerPage:  &perPage,
-	}
-
-	result, err := s.client.Collection("candidates_candidates").Documents().Search(searchParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to perform vector search: %v", err)
-	}
-
-	return convertToSearchResponse(result)
-}
-
-func (s *typesenseService) SemanticSearch(ctx context.Context, request *models.SemanticSearchRequest) (*models.SearchResponse, error) {
-	// Convert parameters to required types
-	filterBy := strings.Join(request.FilterFields, " && ")
-	sortBy := strings.Join(request.SortBy, ",")
-	page := request.Page
-	perPage := request.PerPage
-
-	searchParams := &api.SearchCollectionParams{
-		Q:        request.Query,
-		QueryBy:  strings.Join(request.SearchFields, ","),
-		FilterBy: &filterBy,
-		SortBy:   &sortBy,
-		Page:     &page,
-		PerPage:  &perPage,
-	}
-
-	result, err := s.client.Collection("candidates_candidates").Documents().Search(searchParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to perform semantic search: %v", err)
 	}
 
 	return convertToSearchResponse(result)

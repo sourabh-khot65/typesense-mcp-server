@@ -38,108 +38,59 @@ func (h *SearchHandler) HandleSearch(ctx context.Context, request mcp.CallToolRe
 		return nil, fmt.Errorf("failed to unmarshal search request: %v", err)
 	}
 
-	// Set default collection if not specified
-	if searchReq.Collection == "" {
-		searchReq.Collection = "candidates_candidates"
+	// Set default collection
+	searchReq.Collection = "candidates_candidates"
+
+	// Set default per_page if not specified
+	if searchReq.PerPage == 0 {
+		searchReq.PerPage = 10
+	} else if searchReq.PerPage > 100 {
+		searchReq.PerPage = 100
+	}
+
+	// Ensure page is at least 1
+	if searchReq.Page < 1 {
+		searchReq.Page = 1
 	}
 
 	// Perform search using Typesense
 	response, err := h.typesenseService.Search(ctx, &searchReq)
 	if err != nil {
-		return nil, fmt.Errorf("search failed: %v", err)
+		// Fallback to Tacitbase if Typesense is unavailable
+		response, err = h.tacitbaseService.Search(ctx, &searchReq)
+		if err != nil {
+			return nil, fmt.Errorf("search failed: %v", err)
+		}
 	}
 
 	return mcp.NewToolResultText(FormatSearchResults(response)), nil
 }
 
-// HandleVectorSearch handles vector search requests
-func (h *SearchHandler) HandleVectorSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var searchReq models.VectorSearchRequest
-	jsonData, err := json.Marshal(request.Params.Arguments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
-	}
-
-	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal vector search request: %v", err)
-	}
-
-	// Perform vector search using Typesense
-	response, err := h.typesenseService.VectorSearch(ctx, &searchReq)
-	if err != nil {
-		return nil, fmt.Errorf("vector search failed: %v", err)
-	}
-
-	return mcp.NewToolResultText(FormatSearchResults(response)), nil
-}
-
-// HandleSemanticSearch handles semantic search requests
-func (h *SearchHandler) HandleSemanticSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var searchReq models.SemanticSearchRequest
-	jsonData, err := json.Marshal(request.Params.Arguments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
-	}
-
-	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal semantic search request: %v", err)
-	}
-
-	// Perform semantic search using Typesense
-	response, err := h.typesenseService.SemanticSearch(ctx, &searchReq)
-	if err != nil {
-		return nil, fmt.Errorf("semantic search failed: %v", err)
-	}
-
-	return mcp.NewToolResultText(FormatSearchResults(response)), nil
-}
-
-type AttachmentsSearchRequest struct {
-	Query        string `json:"query"`
-	SearchFields string `json:"search_fields,omitempty"`
-	FilterFields string `json:"filter_fields,omitempty"`
-	SortBy       string `json:"sort_by,omitempty"`
-	RecordID     string `json:"record_id,omitempty"`
-	Page         int    `json:"page,omitempty"`
-	PerPage      int    `json:"per_page,omitempty"`
-}
-
+// HandleAttachmentsSearch handles attachment search requests
 func (h *SearchHandler) HandleAttachmentsSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var attachmentsReq AttachmentsSearchRequest
+	var searchReq models.SearchRequest
 	jsonData, err := json.Marshal(request.Params.Arguments)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
 	}
 
-	if err := json.Unmarshal(jsonData, &attachmentsReq); err != nil {
+	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal attachments search request: %v", err)
 	}
 
-	// Create search request
-	searchReq := models.SearchRequest{
-		Collection: "candidates_candidate-attachments",
-		Query:      attachmentsReq.Query,
-		Page:       attachmentsReq.Page,
-		PerPage:    attachmentsReq.PerPage,
+	// Set collection to attachments
+	searchReq.Collection = "candidates_candidate-attachments"
+
+	// Set default per_page if not specified
+	if searchReq.PerPage == 0 {
+		searchReq.PerPage = 10
+	} else if searchReq.PerPage > 50 {
+		searchReq.PerPage = 50
 	}
 
-	// Convert comma-separated strings to slices
-	if attachmentsReq.SearchFields != "" {
-		searchReq.SearchFields = strings.Split(attachmentsReq.SearchFields, ",")
-	}
-	if attachmentsReq.FilterFields != "" {
-		searchReq.FilterFields = strings.Split(attachmentsReq.FilterFields, ",")
-	}
-	if attachmentsReq.SortBy != "" {
-		searchReq.SortBy = strings.Split(attachmentsReq.SortBy, ",")
-	}
-
-	// Add record_id filter if provided
-	if attachmentsReq.RecordID != "" {
-		if searchReq.FilterFields == nil {
-			searchReq.FilterFields = make([]string, 0)
-		}
-		searchReq.FilterFields = append(searchReq.FilterFields, fmt.Sprintf("record_id:%s", attachmentsReq.RecordID))
+	// Ensure page is at least 1
+	if searchReq.Page < 1 {
+		searchReq.Page = 1
 	}
 
 	// Set default search fields if not specified
@@ -150,67 +101,132 @@ func (h *SearchHandler) HandleAttachmentsSearch(ctx context.Context, request mcp
 	// Perform search using Typesense
 	response, err := h.typesenseService.Search(ctx, &searchReq)
 	if err != nil {
-		return nil, fmt.Errorf("attachments search failed: %v", err)
+		// Fallback to Tacitbase if Typesense is unavailable
+		response, err = h.tacitbaseService.Search(ctx, &searchReq)
+		if err != nil {
+			return nil, fmt.Errorf("attachments search failed: %v", err)
+		}
+	}
+
+	// Debug: Print raw response
+	if response != nil && len(response.Hits) > 0 {
+		fmt.Printf("First hit: %+v\n", response.Hits[0])
+	}
+
+	// Convert hits to attachments
+	attachments := make([]models.Attachment, 0, len(response.Hits))
+	for _, hit := range response.Hits {
+		var attachment models.Attachment
+		hitBytes, err := json.Marshal(hit)
+		if err != nil {
+			continue
+		}
+		if err := json.Unmarshal(hitBytes, &attachment); err != nil {
+			continue
+		}
+		attachments = append(attachments, attachment)
+	}
+
+	formattedResults := FormatSearchResults(attachments)
+	return mcp.NewToolResultText(formattedResults), nil
+}
+
+// HandleStagingSearch handles search requests specifically for staging environment
+func (h *SearchHandler) HandleStagingSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var searchReq models.SearchRequest
+	jsonData, err := json.Marshal(request.Params.Arguments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
+	}
+
+	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal search request: %v", err)
+	}
+
+	// Set default collection
+	searchReq.Collection = "candidates_candidates"
+
+	// Set default per_page if not specified
+	if searchReq.PerPage == 0 {
+		searchReq.PerPage = 10
+	} else if searchReq.PerPage > 100 {
+		searchReq.PerPage = 100
+	}
+
+	// Ensure page is at least 1
+	if searchReq.Page < 1 {
+		searchReq.Page = 1
+	}
+
+	// Perform search directly using Tacitbase staging service
+	response, err := h.tacitbaseService.Search(ctx, &searchReq)
+	if err != nil {
+		return nil, fmt.Errorf("staging search failed: %v", err)
 	}
 
 	return mcp.NewToolResultText(FormatSearchResults(response)), nil
 }
 
-func FormatSearchResults(response *models.SearchResponse) string {
-	if response == nil {
-		return "No results found"
-	}
+func HandleAttachmentsSearchTool(ctx context.Context, req models.SearchRequest) (string, error) {
+	// For now, return empty results since we need to implement the actual search
+	attachments := []models.Attachment{}
+	formattedResults := FormatSearchResults(attachments)
+	return formattedResults, nil
+}
 
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Found %d results (Page %d)\n\n", response.Found, response.Page))
+func FormatSearchResults(results interface{}) string {
+	var formattedResults strings.Builder
 
-	for i, hit := range response.Hits {
-		var candidate models.Candidate
-		candidateBytes, err := json.Marshal(hit)
-		if err != nil {
-			continue
+	switch v := results.(type) {
+	case []models.Attachment:
+		formattedResults.WriteString(fmt.Sprintf("Found %d attachments:\n\n", len(v)))
+		for i, attachment := range v {
+			formattedResults.WriteString(fmt.Sprintf("%d. ", i+1))
+			if attachment.Name != "" {
+				formattedResults.WriteString(fmt.Sprintf("Name: %s\n", attachment.Name))
+			}
+			if attachment.RecordID != "" {
+				formattedResults.WriteString(fmt.Sprintf("   Record ID: %s\n", attachment.RecordID))
+			}
+			if attachment.ModelName != "" {
+				formattedResults.WriteString(fmt.Sprintf("   Model: %s\n", attachment.ModelName))
+			}
+			if attachment.Content != "" {
+				formattedResults.WriteString(fmt.Sprintf("   Content Preview: %s\n", truncateString(attachment.Content, 200)))
+			}
+			if attachment.CreatedAt != "" {
+				formattedResults.WriteString(fmt.Sprintf("   Created: %s\n", attachment.CreatedAt))
+			}
+			formattedResults.WriteString("\n")
 		}
 
-		if err := json.Unmarshal(candidateBytes, &candidate); err != nil {
-			// Try to unmarshal as attachment if candidate unmarshal fails
-			var attachment models.Attachment
-			if err := json.Unmarshal(candidateBytes, &attachment); err != nil {
-				continue
+	case []models.Candidate:
+		formattedResults.WriteString(fmt.Sprintf("Found %d candidates:\n\n", len(v)))
+		for i, candidate := range v {
+			formattedResults.WriteString(fmt.Sprintf("%d. ", i+1))
+			if candidate.FirstName != "" || candidate.LastName != "" {
+				formattedResults.WriteString(fmt.Sprintf("Name: %s %s\n", candidate.FirstName, candidate.LastName))
 			}
-			sb.WriteString(fmt.Sprintf("%d. [Attachment] %s\n", i+1, attachment.Name))
-			if attachment.Content != "" {
-				sb.WriteString(fmt.Sprintf("   Content: %s\n", truncateString(attachment.Content, 100)))
-			}
-			sb.WriteString(fmt.Sprintf("   Record ID: %s\n", attachment.RecordID))
-		} else {
-			// Format candidate information
-			sb.WriteString(fmt.Sprintf("%d. %s %s\n", i+1, candidate.FirstName, candidate.LastName))
 			if candidate.Email != "" {
-				sb.WriteString(fmt.Sprintf("   📧 Email: %s\n", candidate.Email))
+				formattedResults.WriteString(fmt.Sprintf("   Email: %s\n", candidate.Email))
 			}
-			if candidate.Phone != "" {
-				sb.WriteString(fmt.Sprintf("   📱 Phone: %s\n", candidate.Phone))
-			}
-			if candidate.Skills != "" {
-				sb.WriteString(fmt.Sprintf("   💪 Skills: %s\n", candidate.Skills))
+			if len(candidate.Skills) > 0 {
+				formattedResults.WriteString(fmt.Sprintf("   Skills: %s\n", strings.Join(candidate.Skills, ", ")))
 			}
 			if candidate.LatestExperience != "" {
-				sb.WriteString(fmt.Sprintf("   💼 Latest Experience: %s\n", candidate.LatestExperience))
+				formattedResults.WriteString(fmt.Sprintf("   Latest Experience: %s\n", candidate.LatestExperience))
 			}
 			if candidate.HighestEducation != "" {
-				sb.WriteString(fmt.Sprintf("   🎓 Education: %s\n", candidate.HighestEducation))
+				formattedResults.WriteString(fmt.Sprintf("   Highest Education: %s\n", candidate.HighestEducation))
 			}
-			if candidate.LinkedIn != "" {
-				sb.WriteString(fmt.Sprintf("   🔗 LinkedIn: %s\n", candidate.LinkedIn))
+			if candidate.Description != "" {
+				formattedResults.WriteString(fmt.Sprintf("   Description: %s\n", truncateString(candidate.Description, 200)))
 			}
-			if candidate.GitHub != "" {
-				sb.WriteString(fmt.Sprintf("   💻 GitHub: %s\n", candidate.GitHub))
-			}
+			formattedResults.WriteString("\n")
 		}
-		sb.WriteString("\n")
 	}
 
-	return sb.String()
+	return formattedResults.String()
 }
 
 func truncateString(s string, maxLen int) string {

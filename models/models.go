@@ -24,12 +24,14 @@ type VectorSearchRequest struct {
 
 // SemanticSearchRequest represents the request payload for semantic candidate search
 type SemanticSearchRequest struct {
-	Query        string   `json:"query"`
-	SearchFields []string `json:"search_fields,omitempty"`
-	FilterFields []string `json:"filter_fields,omitempty"`
-	SortBy       []string `json:"sort_by,omitempty"`
-	Page         int      `json:"page,omitempty"`
-	PerPage      int      `json:"per_page,omitempty"`
+	Query          string   `json:"query"`
+	SearchFields   []string `json:"search_fields,omitempty"`
+	FilterFields   []string `json:"filter_fields,omitempty"`
+	SortBy         []string `json:"sort_by,omitempty"`
+	Page           int      `json:"page,omitempty"`
+	PerPage        int      `json:"per_page,omitempty"`
+	EmbeddingField string   `json:"embedding_field,omitempty"`
+	EmbeddingModel string   `json:"embedding_model,omitempty"`
 }
 
 // SearchResponse represents the response from a search operation
@@ -40,17 +42,17 @@ type SearchResponse struct {
 	Hits    []map[string]interface{} `json:"hits"`
 }
 
-// Candidate represents a single candidate's information
+// Candidate represents a candidate profile
 type Candidate struct {
 	ID               string                 `json:"id"`
 	FirstName        string                 `json:"first_name"`
 	LastName         string                 `json:"last_name"`
 	Email            string                 `json:"email"`
 	Phone            string                 `json:"phone"`
-	Skills           string                 `json:"skills"`
-	Description      string                 `json:"description"`
-	HighestEducation string                 `json:"highest_education"`
+	Skills           []string               `json:"skills"`
 	LatestExperience string                 `json:"latest_experience"`
+	HighestEducation string                 `json:"highest_education"`
+	Description      string                 `json:"description"`
 	LinkedIn         string                 `json:"linkedin"`
 	GitHub           string                 `json:"github"`
 	Twitter          string                 `json:"twitter"`
@@ -62,20 +64,23 @@ type Candidate struct {
 	ResearchGate     string                 `json:"research_gate"`
 	Pronouns         string                 `json:"pronouns"`
 	Custom           map[string]interface{} `json:"custom"`
+	CreatedAt        string                 `json:"created_at"`
+	UpdatedAt        string                 `json:"updated_at"`
 }
 
 // Attachment represents a candidate attachment
 type Attachment struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	ModelName    string `json:"model_name"`
-	ObjectKey    string `json:"object_key"`
-	RecordID     string `json:"record_id"`
-	Parent       string `json:"parent"`
-	Content      string `json:"content"`
-	AccessibleTo string `json:"accessible_to"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	ModelName    string                 `json:"model_name"`
+	ObjectKey    string                 `json:"object_key"`
+	RecordID     string                 `json:"record_id"`
+	Parent       string                 `json:"parent"`
+	Content      string                 `json:"content"`
+	AccessibleTo string                 `json:"accessible_to"`
+	CreatedAt    string                 `json:"created_at"`
+	UpdatedAt    string                 `json:"updated_at"`
+	Document     map[string]interface{} `json:"document"`
 }
 
 // Comment represents a candidate comment
