@@ -41,7 +41,7 @@ func (s *tacitbaseService) Search(ctx context.Context, request *models.SearchReq
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/search/documents/find/%s", s.baseURL, request.Collection)
+	url := fmt.Sprintf("%s/search/documents/find/candidates", s.baseURL)
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
