@@ -56,11 +56,7 @@ func (h *SearchHandler) HandleSearch(ctx context.Context, request mcp.CallToolRe
 	// Perform search using Typesense
 	response, err := h.typesenseService.Search(ctx, &searchReq)
 	if err != nil {
-		// Fallback to Tacitbase if Typesense is unavailable
-		response, err = h.tacitbaseService.Search(ctx, &searchReq)
-		if err != nil {
-			return nil, fmt.Errorf("search failed: %v", err)
-		}
+		return nil, fmt.Errorf("search failed: %v", err)
 	}
 
 	return mcp.NewToolResultText(FormatSearchResults(response)), nil
@@ -81,33 +77,11 @@ func (h *SearchHandler) HandleAttachmentsSearch(ctx context.Context, request mcp
 	// Set collection to attachments
 	searchReq.Collection = "candidates_candidate-attachments"
 
-	// Set default per_page if not specified
-	if searchReq.PerPage == 0 {
-		searchReq.PerPage = 10
-	} else if searchReq.PerPage > 50 {
-		searchReq.PerPage = 50
-	}
-
-	// Ensure page is at least 1
-	if searchReq.Page < 1 {
-		searchReq.Page = 1
-	}
-
-	// Set default search fields if not specified
-	if len(searchReq.SearchFields) == 0 {
-		searchReq.SearchFields = []string{"name", "content"}
-	}
-
 	// Perform search using Typesense
 	response, err := h.typesenseService.Search(ctx, &searchReq)
 	if err != nil {
-		// Fallback to Tacitbase if Typesense is unavailable
-		response, err = h.tacitbaseService.Search(ctx, &searchReq)
-		if err != nil {
-			return nil, fmt.Errorf("attachments search failed: %v", err)
-		}
+		return nil, fmt.Errorf("attachments search failed: %v", err)
 	}
-
 	// Debug: Print raw response
 	if response != nil && len(response.Hits) > 0 {
 		fmt.Printf("First hit: %+v\n", response.Hits[0])
@@ -146,18 +120,6 @@ func (h *SearchHandler) HandleStagingSearch(ctx context.Context, request mcp.Cal
 	// Set default collection
 	searchReq.Collection = "candidates_candidates"
 
-	// Set default per_page if not specified
-	if searchReq.PerPage == 0 {
-		searchReq.PerPage = 10
-	} else if searchReq.PerPage > 100 {
-		searchReq.PerPage = 100
-	}
-
-	// Ensure page is at least 1
-	if searchReq.Page < 1 {
-		searchReq.Page = 1
-	}
-
 	// Perform search directly using Tacitbase staging service
 	response, err := h.tacitbaseService.Search(ctx, &searchReq)
 	if err != nil {
@@ -167,11 +129,40 @@ func (h *SearchHandler) HandleStagingSearch(ctx context.Context, request mcp.Cal
 	return mcp.NewToolResultText(FormatSearchResults(response)), nil
 }
 
-func HandleAttachmentsSearchTool(ctx context.Context, req models.SearchRequest) (string, error) {
-	// For now, return empty results since we need to implement the actual search
-	attachments := []models.Attachment{}
+// HandleAttachmentsSearchTool handles attachment search requests as a standalone tool
+func (h *SearchHandler) HandleAttachmentsSearchTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var searchReq models.SearchRequest
+	jsonData, err := json.Marshal(request.Params.Arguments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
+	}
+
+	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal attachments search request: %v", err)
+	}
+
+	searchReq.Collection = "candidates_candidate-attachments"
+
+	response, err := h.typesenseService.Search(ctx, &searchReq)
+	if err != nil {
+		return nil, fmt.Errorf("attachments search failed: %v", err)
+	}
+
+	attachments := make([]models.Attachment, 0, len(response.Hits))
+	for _, hit := range response.Hits {
+		var attachment models.Attachment
+		hitBytes, err := json.Marshal(hit)
+		if err != nil {
+			continue
+		}
+		if err := json.Unmarshal(hitBytes, &attachment); err != nil {
+			continue
+		}
+		attachments = append(attachments, attachment)
+	}
+
 	formattedResults := FormatSearchResults(attachments)
-	return formattedResults, nil
+	return mcp.NewToolResultText(formattedResults), nil
 }
 
 func FormatSearchResults(results interface{}) string {
@@ -192,7 +183,7 @@ func FormatSearchResults(results interface{}) string {
 				formattedResults.WriteString(fmt.Sprintf("   Model: %s\n", attachment.ModelName))
 			}
 			if attachment.Content != "" {
-				formattedResults.WriteString(fmt.Sprintf("   Content Preview: %s\n", truncateString(attachment.Content, 200)))
+				formattedResults.WriteString(fmt.Sprintf("   Content Preview: %s\n", attachment.Content))
 			}
 			if attachment.CreatedAt != "" {
 				formattedResults.WriteString(fmt.Sprintf("   Created: %s\n", attachment.CreatedAt))
@@ -220,18 +211,11 @@ func FormatSearchResults(results interface{}) string {
 				formattedResults.WriteString(fmt.Sprintf("   Highest Education: %s\n", candidate.HighestEducation))
 			}
 			if candidate.Description != "" {
-				formattedResults.WriteString(fmt.Sprintf("   Description: %s\n", truncateString(candidate.Description, 200)))
+				formattedResults.WriteString(fmt.Sprintf("   Description: %s\n", candidate.Description))
 			}
 			formattedResults.WriteString("\n")
 		}
 	}
 
 	return formattedResults.String()
-}
-
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }

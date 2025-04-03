@@ -12,8 +12,8 @@ func main() {
 	s := server.NewMCPServer(
 		"Tacitbase MCP Server",
 		"1.0.0",
-		server.WithResourceCapabilities(true, true),
-		server.WithToolCapabilities(true),
+		// server.WithResourceCapabilities(true, true),
+		// server.WithToolCapabilities(true),
 	)
 
 	// Register tools

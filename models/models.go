@@ -2,36 +2,13 @@ package models
 
 // SearchRequest represents the request payload for candidate search
 type SearchRequest struct {
-	Collection   string   `json:"collection"`
-	Query        string   `json:"query"`
-	SearchFields []string `json:"search_fields,omitempty"`
-	FilterFields []string `json:"filter_fields,omitempty"`
-	SortBy       []string `json:"sort_by,omitempty"`
-	GroupBy      []string `json:"group_by,omitempty"`
-	Page         int      `json:"page,omitempty"`
-	PerPage      int      `json:"per_page,omitempty"`
-}
-
-// VectorSearchRequest represents the request payload for vector-based candidate search
-type VectorSearchRequest struct {
-	VectorQuery  string   `json:"vector_query"`
-	SearchFields []string `json:"search_fields,omitempty"`
-	FilterFields []string `json:"filter_fields,omitempty"`
-	SortBy       []string `json:"sort_by,omitempty"`
-	Page         int      `json:"page,omitempty"`
-	PerPage      int      `json:"per_page,omitempty"`
-}
-
-// SemanticSearchRequest represents the request payload for semantic candidate search
-type SemanticSearchRequest struct {
-	Query          string   `json:"query"`
-	SearchFields   []string `json:"search_fields,omitempty"`
-	FilterFields   []string `json:"filter_fields,omitempty"`
-	SortBy         []string `json:"sort_by,omitempty"`
-	Page           int      `json:"page,omitempty"`
-	PerPage        int      `json:"per_page,omitempty"`
-	EmbeddingField string   `json:"embedding_field,omitempty"`
-	EmbeddingModel string   `json:"embedding_model,omitempty"`
+	Collection string `json:"collection"`
+	Query      string `json:"query"`
+	QueryBy    string `json:"query_by,omitempty"`
+	FilterBy   string `json:"filter_by,omitempty"`
+	SortBy     string `json:"sort_by,omitempty"`
+	Page       int    `json:"page,omitempty"`
+	PerPage    int    `json:"per_page,omitempty"`
 }
 
 // SearchResponse represents the response from a search operation

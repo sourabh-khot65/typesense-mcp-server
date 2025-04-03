@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"tb-mcp-server/config"
 	"tb-mcp-server/models"
@@ -53,18 +52,16 @@ func (s *typesenseService) Search(ctx context.Context, request *models.SearchReq
 
 func buildSearchParams(request *models.SearchRequest) *api.SearchCollectionParams {
 	// Convert parameters to required types
-	filterBy := strings.Join(request.FilterFields, " && ")
-	sortBy := strings.Join(request.SortBy, ",")
-	groupBy := strings.Join(request.GroupBy, ",")
+	filterBy := request.FilterBy
+	sortBy := request.SortBy
 	page := request.Page
 	perPage := request.PerPage
 
 	return &api.SearchCollectionParams{
 		Q:        request.Query,
-		QueryBy:  strings.Join(request.SearchFields, ","),
+		QueryBy:  request.QueryBy,
 		FilterBy: &filterBy,
 		SortBy:   &sortBy,
-		GroupBy:  &groupBy,
 		Page:     &page,
 		PerPage:  &perPage,
 	}
