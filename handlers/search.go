@@ -40,19 +40,6 @@ func (h *SearchHandler) HandleSearch(ctx context.Context, request mcp.CallToolRe
 
 	// Set default collection
 	searchReq.Collection = "candidates_candidates"
-
-	// Set default per_page if not specified
-	if searchReq.PerPage == 0 {
-		searchReq.PerPage = 10
-	} else if searchReq.PerPage > 100 {
-		searchReq.PerPage = 100
-	}
-
-	// Ensure page is at least 1
-	if searchReq.Page < 1 {
-		searchReq.Page = 1
-	}
-
 	// Perform search using Typesense
 	response, err := h.typesenseService.Search(ctx, &searchReq)
 	if err != nil {

@@ -11,15 +11,18 @@ import (
 	"github.com/typesense/typesense-go/typesense/api"
 )
 
+// TypesenseService is an interface for the Typesense service
 type TypesenseService interface {
 	Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error)
 }
 
+// typesenseService is a service that provides a client for Typesense
 type typesenseService struct {
 	client             *typesense.Client
 	allowedCollections map[string]bool
 }
 
+// NewTypesenseService creates a new Typesense service
 func NewTypesenseService(config *config.TypesenseConfig) TypesenseService {
 	client := typesense.NewClient(
 		typesense.WithServer(config.URL()),
@@ -35,14 +38,20 @@ func NewTypesenseService(config *config.TypesenseConfig) TypesenseService {
 	}
 }
 
+// Search searches the collection for the given request
 func (s *typesenseService) Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error) {
 	if !s.allowedCollections[request.Collection] {
 		return nil, fmt.Errorf("invalid collection: %s. Only 'candidates_candidates' and 'candidates_candidate-attachments' collections are allowed", request.Collection)
 	}
 
-	searchParams := buildSearchParams(request)
-
-	result, err := s.client.Collection(request.Collection).Documents().Search(searchParams)
+	result, err := s.client.Collection(request.Collection).Documents().Search(&api.SearchCollectionParams{
+		Q:        request.Query,
+		QueryBy:  request.QueryBy,
+		FilterBy: &request.FilterBy,
+		SortBy:   &request.SortBy,
+		Page:     &request.Page,
+		PerPage:  &request.PerPage,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to search documents: %v", err)
 	}
@@ -50,23 +59,7 @@ func (s *typesenseService) Search(ctx context.Context, request *models.SearchReq
 	return convertToSearchResponse(result)
 }
 
-func buildSearchParams(request *models.SearchRequest) *api.SearchCollectionParams {
-	// Convert parameters to required types
-	filterBy := request.FilterBy
-	sortBy := request.SortBy
-	page := request.Page
-	perPage := request.PerPage
-
-	return &api.SearchCollectionParams{
-		Q:        request.Query,
-		QueryBy:  request.QueryBy,
-		FilterBy: &filterBy,
-		SortBy:   &sortBy,
-		Page:     &page,
-		PerPage:  &perPage,
-	}
-}
-
+// convertToSearchResponse converts the search result to a search response
 func convertToSearchResponse(result *api.SearchResult) (*models.SearchResponse, error) {
 	if result == nil {
 		return &models.SearchResponse{}, nil
