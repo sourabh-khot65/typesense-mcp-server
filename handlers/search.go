@@ -110,6 +110,7 @@ func (h *SearchHandler) HandleStagingSearch(ctx context.Context, request mcp.Cal
 	return mcp.NewToolResultText(FormatCandidateResults(response)), nil
 }
 
+// FormatCandidateResults formats the candidate search response
 func FormatCandidateResults(response *models.CandidateSearchResponse) string {
 	formattedResults := fmt.Sprintf("Found %d candidates\n", len(response.Candidates.Items))
 	for _, candidate := range response.Candidates.Items {
