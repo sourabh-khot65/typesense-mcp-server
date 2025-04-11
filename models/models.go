@@ -1,48 +1,40 @@
 package models
 
-// SearchRequest represents the request payload for candidate search
-type SearchRequest struct {
-	Collection string `json:"collection"`
-	Query      string `json:"query"`
-	QueryBy    string `json:"query_by,omitempty"`
-	FilterBy   string `json:"filter_by,omitempty"`
-	SortBy     string `json:"sort_by,omitempty"`
-	Page       int    `json:"page,omitempty"`
-	PerPage    int    `json:"per_page,omitempty"`
+type CandidateSearchResponse struct {
+	Candidates CandidateSearch `json:"candidates"`
 }
 
-// SearchResponse represents the response from a search operation
-type SearchResponse struct {
-	Found   int                      `json:"found"`
-	Page    int                      `json:"page"`
-	PerPage int                      `json:"per_page"`
-	Hits    []map[string]interface{} `json:"hits"`
+// CandidateSearchResponse represents the response from a candidate search operation
+type CandidateSearch struct {
+	TotalCount int         `json:"total_count"`
+	PageCount  int         `json:"page_count"`
+	Page       int         `json:"page"`
+	PerPage    int         `json:"per_page"`
+	Items      []Candidate `json:"items"`
 }
 
 // Candidate represents a candidate profile
 type Candidate struct {
-	ID               string                 `json:"id"`
-	FirstName        string                 `json:"first_name"`
-	LastName         string                 `json:"last_name"`
-	Email            string                 `json:"email"`
-	Phone            string                 `json:"phone"`
-	Skills           []string               `json:"skills"`
-	LatestExperience string                 `json:"latest_experience"`
-	HighestEducation string                 `json:"highest_education"`
-	Description      string                 `json:"description"`
-	LinkedIn         string                 `json:"linkedin"`
-	GitHub           string                 `json:"github"`
-	Twitter          string                 `json:"twitter"`
-	StackOverflow    string                 `json:"stackoverflow"`
-	PersonalBlog     string                 `json:"personal_blog"`
-	Dribbble         string                 `json:"dribbble"`
-	Behance          string                 `json:"behance"`
-	GoogleScholar    string                 `json:"google_scholar"`
-	ResearchGate     string                 `json:"research_gate"`
-	Pronouns         string                 `json:"pronouns"`
-	Custom           map[string]interface{} `json:"custom"`
-	CreatedAt        string                 `json:"created_at"`
-	UpdatedAt        string                 `json:"updated_at"`
+	ID               string `json:"id"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	Email            string `json:"email"`
+	Phone            string `json:"phone"`
+	Location         string `json:"location"`
+	Skills           string `json:"skills"`
+	LatestExperience string `json:"latest_experience"`
+	HighestEducation string `json:"highest_education"`
+	Description      string `json:"description"`
+	LinkedIn         string `json:"linkedin"`
+	GitHub           string `json:"github"`
+	Twitter          string `json:"twitter"`
+	StackOverflow    string `json:"stackoverflow"`
+	PersonalBlog     string `json:"personal_blog"`
+	Dribbble         string `json:"dribbble"`
+	Behance          string `json:"behance"`
+	GoogleScholar    string `json:"google_scholar"`
+	ResearchGate     string `json:"research_gate"`
+	Pronouns         string `json:"pronouns"`
 }
 
 // Attachment represents a candidate attachment

@@ -10,11 +10,13 @@ import (
 	"os"
 
 	"tb-mcp-server/models"
+
+	"github.com/typesense/typesense-go/typesense/api"
 )
 
 // TacitbaseService defines the interface for Tacitbase operations
 type TacitbaseService interface {
-	Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error)
+	SearchCandidates(ctx context.Context, collection string, request *api.SearchCollectionParams) (*models.CandidateSearchResponse, error)
 }
 
 // tacitbaseService implements the TacitbaseService interface
@@ -32,7 +34,7 @@ func NewTacitbaseService() TacitbaseService {
 }
 
 // Search performs a search operation using Tacitbase's API
-func (s *tacitbaseService) Search(ctx context.Context, request *models.SearchRequest) (*models.SearchResponse, error) {
+func (s *tacitbaseService) SearchCandidates(ctx context.Context, collection string, request *api.SearchCollectionParams) (*models.CandidateSearchResponse, error) {
 	// Convert request to JSON
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -75,7 +77,7 @@ func (s *tacitbaseService) Search(ctx context.Context, request *models.SearchReq
 	}
 
 	// Parse response
-	var searchResp models.SearchResponse
+	var searchResp models.CandidateSearchResponse
 	if err := json.Unmarshal(body, &searchResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %v", err)
 	}
