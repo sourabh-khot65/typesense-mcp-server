@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"tb-mcp-server/config"
+	"typesense-mcp-server/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/typesense/typesense-go/typesense"
@@ -18,8 +18,7 @@ type TypesenseService interface {
 
 // typesenseService is a service that provides a client for Typesense
 type typesenseService struct {
-	client             *typesense.Client
-	allowedCollections map[string]bool
+	client *typesense.Client
 }
 
 // NewTypesenseService creates a new Typesense service
@@ -31,24 +30,15 @@ func NewTypesenseService(config *config.TypesenseConfig) TypesenseService {
 
 	return &typesenseService{
 		client: client,
-		allowedCollections: map[string]bool{
-			"candidates_candidates":            true,
-			"candidates_candidate-attachments": true,
-		},
 	}
 }
 
 // Search searches the collection for the given request
 func (s *typesenseService) Search(ctx context.Context, collection string, request *api.SearchCollectionParams) (*api.SearchResult, error) {
-	if !s.allowedCollections[collection] {
-		logrus.Errorf("invalid collection: %s. Only 'candidates_candidates' and 'candidates_candidate-attachments' collections are allowed", collection)
-		return nil, fmt.Errorf("invalid collection: %s. Only 'candidates_candidates' and 'candidates_candidate-attachments' collections are allowed", collection)
-	}
-
 	result, err := s.client.Collection(collection).Documents().Search(request)
 	if err != nil {
-		logrus.Errorf("failed to search documents: %v", err)
-		return nil, fmt.Errorf("failed to search documents: %v", err)
+		logrus.Errorf("failed to search documents in collection %s: %v", collection, err)
+		return nil, fmt.Errorf("failed to search documents in collection %s: %v", collection, err)
 	}
 
 	return result, nil

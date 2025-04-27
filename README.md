@@ -1,123 +1,53 @@
-# Tacitbase MCP Server
+# Typesense MCP Server
 
-This is a Machine Comprehension Protocol (MCP) server for Tacitbase that provides advanced search capabilities using both Tacitbase's native search and Typesense for enhanced search features.
-
-## Project Structure
-
-The project follows a clean, modular architecture:
-
-```
-.
-├── models/      # Data structures and types
-├── services/    # Business logic and external service interactions
-├── handlers/    # Request handlers and routing logic
-├── tools/       # Tool registration and configuration
-├── main.go      # Application entry point
-└── README.md    # Project documentation
-```
-
-## Packages
-
-- `models`: Contains all data structures and types used across the application
-- `services`: Implements the business logic and external service interactions
-- `handlers`: Contains the request handlers that process incoming requests
-- `tools`: Registers the tools available for searching candidates
+A Model Control Protocol (MCP) server for interacting with Typesense, a fast, typo-tolerant search engine. This server provides a standardized interface for performing searches across any Typesense collection.
 
 ## Features
 
-- Basic keyword search with filtering and sorting
-- Vector search for similarity-based matching
-- Semantic search with natural language understanding
-- Fallback to Tacitbase's native search when needed
-- Tool registration for searching candidates
-
-## Search Tools
-
-### 1. Basic Search (`search_candidates`)
-- Keyword-based search with typo tolerance
-- Supports field-specific search
-- Filtering and sorting capabilities
-- Group by functionality
-- Exact matching option
-
-### 2. Vector Search (`vector_search_candidates`)
-- Similarity search using vector embeddings
-- Ideal for finding candidates with similar profiles
-- Supports hybrid search combining vectors with filters
-
-### 3. Semantic Search (`semantic_search_candidates`)
-- Natural language understanding
-- Automatic embedding generation
-- Support for multiple embedding models (OpenAI, SBERT, E5)
-- Hybrid search combining semantic understanding with filters
+- Generic search interface for any Typesense collection
+- Support for all Typesense search parameters
+- Typo-tolerant search
+- Filtering and faceting support
+- Pagination
 
 ## Configuration
 
-### Environment Variables
+The server can be configured using the following environment variables:
 
-- `TACITBASE_AUTH_TOKEN`: Authentication token for Tacitbase API
-- `TYPESENSE_API_KEY`: API key for Typesense
-- `TYPESENSE_HOST`: Typesense host (default: localhost)
-- `TYPESENSE_PORT`: Typesense port (default: 8108)
-- `TYPESENSE_PROTOCOL`: Protocol for Typesense (default: http)
+- `TYPESENSE_HOST`: Typesense server host (default: "localhost")
+- `TYPESENSE_PORT`: Typesense server port (default: 8108)
+- `TYPESENSE_PROTOCOL`: Protocol to use (http/https) (default: "http")
+- `TYPESENSE_API_KEY`: Typesense API key (default: "xyz")
 
-## Installation
+## Available Tools
 
-1. Install dependencies:
-```bash
-go mod download
-```
+### typesense_search
 
-2. Build the server:
-```bash
-go build -o tb-mcp-server
-```
+Search documents in any Typesense collection.
 
-3. Run the server:
-```bash
-./tb-mcp-server
-```
-
-## Example Usage
-
-### Basic Search
-```json
-{
-  "query": "golang developer",
-  "search_fields": "skills,latest_experience",
-  "filter_fields": "location:San Francisco",
-  "sort_by": "latest_experience:desc",
-  "page": 1,
-  "per_page": 20
-}
-```
-
-### Vector Search
-```json
-{
-  "vector_query": "[0.1, 0.2, ..., 0.512]",
-  "filter_fields": "years_of_experience:>5",
-  "page": 1,
-  "per_page": 20
-}
-```
-
-### Semantic Search
-```json
-{
-  "query": "experienced team lead with cloud architecture background",
-  "embedding_model": "openai",
-  "filter_fields": "years_of_experience:>8",
-  "page": 1,
-  "per_page": 20
-}
-```
-
+Parameters:
+- `collection` (required): Name of the Typesense collection to search in
+- `q` (required): Search query to find documents
+- `query_by` (optional): Comma-separated list of fields to search in (default: "*")
+- `filter_by` (optional): Filter expressions (e.g., "field:value", "num_field:>100")
+- `page` (required): Page number for pagination (1-based)
+- `per_page` (required): Number of results per page (default: 10, max: 100)
 
 ## Development
 
-To modify or extend the server:
+### Prerequisites
 
-1. Edit `main.go` to add new tools or modify existing ones
-2. Run tests (if any)
-3. Build and test the server
+- Go 1.23 or later
+- Access to a Typesense server
+
+### Building
+
+```bash
+go build -o typesense-mcp-server
+```
+
+### Running
+
+```bash
+./typesense-mcp-server
+```

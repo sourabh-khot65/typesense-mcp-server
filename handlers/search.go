@@ -5,152 +5,109 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"tb-mcp-server/models"
-	"tb-mcp-server/services"
+	"typesense-mcp-server/services"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/sirupsen/logrus"
 	"github.com/typesense/typesense-go/typesense/api"
 )
 
-// SearchHandler handles candidate search requests
+// SearchHandler handles Typesense search requests
 type SearchHandler struct {
-	tacitbaseService services.TacitbaseService
 	typesenseService services.TypesenseService
 }
 
 // NewSearchHandler creates a new instance of SearchHandler
-func NewSearchHandler(tacitbaseService services.TacitbaseService, typesenseService services.TypesenseService) *SearchHandler {
+func NewSearchHandler(typesenseService services.TypesenseService) *SearchHandler {
 	return &SearchHandler{
-		tacitbaseService: tacitbaseService,
 		typesenseService: typesenseService,
 	}
 }
 
-// HandleSearch handles the basic search request
-func (h *SearchHandler) HandleCandidateSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// SearchResponse represents the formatted search response
+type SearchResponse struct {
+	Found      int                      `json:"found"`
+	Page       int                      `json:"page"`
+	PerPage    int                      `json:"per_page"`
+	Documents  []map[string]interface{} `json:"documents"`
+	FacetCount []api.FacetCounts        `json:"facet_counts,omitempty"`
+}
+
+// HandleSearch handles the search request for any Typesense collection
+func (h *SearchHandler) HandleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Extract collection name from arguments
+	collection, ok := request.Params.Arguments["collection"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	// Create search parameters
 	var searchReq api.SearchCollectionParams
 	jsonData, err := json.Marshal(request.Params.Arguments)
 	if err != nil {
-		logrus.Errorf("ERROR: Failed to marshal search arguments: %v", err)
+		logrus.Errorf("failed to marshal search arguments: %v", err)
 		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
 	}
 
 	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
-		logrus.Errorf("ERROR: Failed to unmarshal search request: %v", err)
+		logrus.Errorf("failed to unmarshal search request: %v", err)
 		return nil, fmt.Errorf("failed to unmarshal search request: %v", err)
 	}
 
 	// Perform search using Typesense
-	response, err := h.typesenseService.Search(ctx, "candidates_candidates", &searchReq)
+	response, err := h.typesenseService.Search(ctx, collection, &searchReq)
 	if err != nil {
-		logrus.Errorf("ERROR: Search operation failed: %v", err)
+		logrus.Errorf("failed to search documents in collection %s: %v", collection, err)
 		return nil, fmt.Errorf("search failed: %v", err)
 	}
 
-	// Log the response for debugging
-	logrus.Infof("DEBUG: Search response: %+v", response)
+	// Format the response
+	result := formatTypesenseResults(response)
 
-	return mcp.NewToolResultText(FormatTypesenseCandidateResults(response)), nil
-}
-
-// HandleAttachmentsSearch handles attachment search requests
-func (h *SearchHandler) HandleAttachmentsSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var searchReq api.SearchCollectionParams
-	jsonData, err := json.Marshal(request.Params.Arguments)
+	// Convert to JSON string with indentation for better readability
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		logrus.Errorf("ERROR: Failed to marshal attachment search arguments: %v", err)
-		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
+		logrus.Errorf("failed to marshal search results: %v", err)
+		return nil, fmt.Errorf("failed to format results: %v", err)
 	}
 
-	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
-		logrus.Errorf("ERROR: Failed to unmarshal attachments search request: %v", err)
-		return nil, fmt.Errorf("failed to unmarshal attachments search request: %v", err)
-	}
-
-	// Perform search using Typesense
-	response, err := h.typesenseService.Search(ctx, "candidates_candidate-attachments", &searchReq)
-	if err != nil {
-		logrus.Errorf("ERROR: Attachments search operation failed: %v", err)
-		return nil, fmt.Errorf("attachments search failed: %v", err)
-	}
-
-	// Debug: Print raw response
-	if response != nil && response.Hits != nil && len(*response.Hits) > 0 {
-		logrus.Infof("DEBUG: First attachment search hit: %+v", (*response.Hits)[0])
-	}
-
-	formattedResults := FormatTypesenseAttachmentResults(response)
-	return mcp.NewToolResultText(formattedResults), nil
+	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
-// HandleStagingSearch handles search requests specifically for staging environment
-func (h *SearchHandler) HandleStagingSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var searchReq api.SearchCollectionParams
-	jsonData, err := json.Marshal(request.Params.Arguments)
-	if err != nil {
-		logrus.Errorf("ERROR: Failed to marshal staging search arguments: %v", err)
-		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
-	}
-
-	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
-		logrus.Errorf("ERROR: Failed to unmarshal staging search request: %v", err)
-		return nil, fmt.Errorf("failed to unmarshal search request: %v", err)
-	}
-
-	// Perform search using Typesense
-	response, err := h.tacitbaseService.SearchCandidates(ctx, "candidates_candidates", &searchReq)
-	if err != nil {
-		logrus.Errorf("ERROR: Staging search operation failed: %v", err)
-		return nil, fmt.Errorf("staging search failed: %v", err)
-	}
-
-	logrus.Infof("DEBUG: Staging search response: %+v", response)
-
-	return mcp.NewToolResultText(FormatCandidateResults(response)), nil
-}
-
-// FormatCandidateResults formats the candidate search response
-func FormatCandidateResults(response *models.CandidateSearchResponse) string {
-	formattedResults := fmt.Sprintf("Found %d candidates\n", len(response.Candidates.Items))
-	for _, candidate := range response.Candidates.Items {
-		formattedResults += fmt.Sprintf("Candidate: %s %s\n", candidate.FirstName, candidate.LastName)
-		formattedResults += fmt.Sprintf("Email: %s\n", candidate.Email)
-		formattedResults += fmt.Sprintf("Phone: %s\n", candidate.Phone)
-		formattedResults += fmt.Sprintf("Location: %s\n", candidate.Location)
-		formattedResults += fmt.Sprintf("Highest Education: %s\n", candidate.HighestEducation)
-		formattedResults += fmt.Sprintf("Latest Experience: %s\n", candidate.LatestExperience)
-		formattedResults += fmt.Sprintf("Description: %s\n", candidate.Description)
-		formattedResults += fmt.Sprintf("LinkedIn: %s\n", candidate.LinkedIn)
-		formattedResults += fmt.Sprintf("GitHub: %s\n", candidate.GitHub)
-	}
-	return formattedResults
-}
-
-// FormatTypesenseCandidateResults formats the Typesense response
-func FormatTypesenseCandidateResults(response *api.SearchResult) string {
-	formattedResults := fmt.Sprintf("Found %d candidates\n", *response.Found)
-	for _, hit := range *response.Hits {
-		formattedResults += fmt.Sprintf("Candidate: %s\n", hit.Document)
-	}
-	return formattedResults
-}
-
-// FormatTypesenseAttachmentResults formats the Typesense response
-func FormatTypesenseAttachmentResults(response *api.SearchResult) string {
-	formattedResults := fmt.Sprintf("Found %d attachments\n", *response.Found)
-	for _, hit := range *response.Hits {
-		jsonData, err := json.Marshal(hit.Document)
-		if err != nil {
-			logrus.Errorf("ERROR: Failed to marshal attachment result: %v", err)
-			continue
+// formatTypesenseResults formats the Typesense search response
+func formatTypesenseResults(response *api.SearchResult) *SearchResponse {
+	if response == nil || response.Found == nil {
+		return &SearchResponse{
+			Found:     0,
+			Page:      1,
+			PerPage:   10,
+			Documents: make([]map[string]interface{}, 0),
 		}
-		var attachment models.Attachment
-		if err := json.Unmarshal(jsonData, &attachment); err != nil {
-			logrus.Errorf("ERROR: Failed to unmarshal attachment result: %v", err)
-			continue
-		}
-		formattedResults += fmt.Sprintf("Attachment: %s\n", attachment.Name)
 	}
-	return formattedResults
+
+	// Format documents
+	documents := make([]map[string]interface{}, 0)
+	if response.Hits != nil {
+		for _, hit := range *response.Hits {
+			if hit.Document != nil {
+				doc := *hit.Document
+				// Add search score to document
+				if hit.TextMatch != nil {
+					doc["_text_match"] = *hit.TextMatch
+				}
+				if hit.Highlights != nil {
+					doc["_highlights"] = hit.Highlights
+				}
+				documents = append(documents, doc)
+			}
+		}
+	}
+
+	return &SearchResponse{
+		Found:      *response.Found,
+		Page:       1, // Typesense uses offset-based pagination
+		PerPage:    len(documents),
+		Documents:  documents,
+		FacetCount: *response.FacetCounts,
+	}
 }

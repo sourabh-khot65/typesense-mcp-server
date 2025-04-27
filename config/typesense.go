@@ -16,9 +16,9 @@ type TypesenseConfig struct {
 func NewTypesenseConfig() *TypesenseConfig {
 	return &TypesenseConfig{
 		Host:     getEnvOrDefault("TYPESENSE_HOST", "localhost"),
-		Port:     getEnvIntOrDefault("TYPESENSE_PORT", 8090),
+		Port:     getEnvIntOrDefault("TYPESENSE_PORT", 8108),
 		Protocol: getEnvOrDefault("TYPESENSE_PROTOCOL", "http"),
-		APIKey:   getEnvOrDefault("TYPESENSE_API_KEY", "i8hfYPU9sxp0efSsMImRAyBCrHSsexa7"),
+		APIKey:   getEnvOrDefault("TYPESENSE_API_KEY", "xyz"),
 	}
 }
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"tb-mcp-server/tools"
+	"typesense-mcp-server/tools"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -22,7 +22,7 @@ func init() {
 func main() {
 	// Create MCP server
 	s := server.NewMCPServer(
-		"Tacitbase MCP Server",
+		"Typesense MCP Server",
 		"1.0.0",
 		// server.WithResourceCapabilities(true, true),
 		// server.WithToolCapabilities(true),

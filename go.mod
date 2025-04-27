@@ -1,4 +1,4 @@
-module tb-mcp-server
+module typesense-mcp-server
 
 go 1.23
 
