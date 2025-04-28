@@ -14,6 +14,7 @@ import (
 // TypesenseService is an interface for the Typesense service
 type TypesenseService interface {
 	Search(ctx context.Context, collection string, request *api.SearchCollectionParams) (*api.SearchResult, error)
+	GetCollections(ctx context.Context) ([]*api.CollectionResponse, error)
 }
 
 // typesenseService is a service that provides a client for Typesense
@@ -31,6 +32,16 @@ func NewTypesenseService(config *config.TypesenseConfig) TypesenseService {
 	return &typesenseService{
 		client: client,
 	}
+}
+
+// GetCollections gets all collections from Typesense
+func (s *typesenseService) GetCollections(ctx context.Context) ([]*api.CollectionResponse, error) {
+	result, err := s.client.Collections().Retrieve()
+	if err != nil {
+		logrus.Errorf("failed to get collections: %v", err)
+		return nil, fmt.Errorf("failed to get collections: %v", err)
+	}
+	return result, nil
 }
 
 // Search searches the collection for the given request

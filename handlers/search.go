@@ -33,8 +33,19 @@ type SearchResponse struct {
 	FacetCount []api.FacetCounts        `json:"facet_counts,omitempty"`
 }
 
-// HandleSearch handles the search request for any Typesense collection
-func (h *SearchHandler) HandleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// GetTypesenseCollections handles the request to get all Typesense collections
+func (h *SearchHandler) GetTypesenseCollections(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	collections, err := h.typesenseService.GetCollections(ctx)
+	if err != nil {
+		logrus.Errorf("failed to get collections: %v", err)
+		return nil, fmt.Errorf("failed to get collections: %v", err)
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("%v", collections)), nil
+}
+
+// Search handles the search request for any Typesense collection
+func (h *SearchHandler) SearchInTypesenseCollection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Extract collection name from arguments
 	collection, ok := request.Params.Arguments["collection"].(string)
 	if !ok {

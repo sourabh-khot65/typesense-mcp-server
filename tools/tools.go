@@ -20,6 +20,11 @@ func RegisterTools(s *server.MCPServer) {
 	// Initialize handlers
 	searchHandler := handlers.NewSearchHandler(typesenseService)
 
+	collectionsTool := mcp.NewTool("typesense_collections",
+		mcp.WithDescription("Get all collections with their details such as schema etc. from Typesense"),
+	)
+	s.AddTool(collectionsTool, searchHandler.GetTypesenseCollections)
+
 	// Add search tool for Typesense collections
 	searchTool := mcp.NewTool("typesense_search",
 		mcp.WithDescription("Search documents in a Typesense collection using powerful search capabilities. "+
@@ -50,5 +55,5 @@ func RegisterTools(s *server.MCPServer) {
 			mcp.Required(),
 		),
 	)
-	s.AddTool(searchTool, searchHandler.HandleSearch)
+	s.AddTool(searchTool, searchHandler.SearchInTypesenseCollection)
 }
