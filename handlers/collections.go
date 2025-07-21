@@ -12,90 +12,96 @@ import (
 	"github.com/typesense/typesense-go/typesense/api"
 )
 
-type CollectionsHandler struct {
+// CollectionHandler handles Typesense collection operations.
+type CollectionHandler struct {
 	typesenseService services.TypesenseService
 }
 
-func NewCollectionsHandler(typesenseService services.TypesenseService) *CollectionsHandler {
-	return &CollectionsHandler{typesenseService: typesenseService}
+// NewCollectionHandler creates a new CollectionHandler.
+func NewCollectionHandler(typesenseService services.TypesenseService) *CollectionHandler {
+	return &CollectionHandler{typesenseService: typesenseService}
 }
 
-func (h *CollectionsHandler) GetCollection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, ok := request.Params.Arguments["name"].(string)
-	if !ok || name == "" {
-		return nil, fmt.Errorf("collection name is required")
+// GetByName retrieves a collection by name.
+func (h *CollectionHandler) GetByName(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	collectionName, ok := req.Params.Arguments["collection_name"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection_name is required")
 	}
-	result, err := h.typesenseService.GetCollection(ctx, name)
+	result, err := h.typesenseService.GetCollection(ctx, collectionName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get collection '%s': %w", collectionName, err)
 	}
 	resultJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		logrus.Errorf("failed to marshal collection: %v", err)
-		return nil, fmt.Errorf("failed to format result: %v", err)
+		return nil, fmt.Errorf("failed to format result: %w", err)
 	}
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
-func (h *CollectionsHandler) CreateCollection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// Create creates a new collection.
+func (h *CollectionHandler) Create(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	var schema api.CollectionSchema
-	jsonData, err := json.Marshal(request.Params.Arguments)
+	jsonData, err := json.Marshal(req.Params.Arguments["schema"])
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 	if err := json.Unmarshal(jsonData, &schema); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal collection schema: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal collection schema: %w", err)
 	}
 	result, err := h.typesenseService.CreateCollection(ctx, &schema)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create collection: %w", err)
 	}
 	resultJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		logrus.Errorf("failed to marshal collection: %v", err)
-		return nil, fmt.Errorf("failed to format result: %v", err)
+		return nil, fmt.Errorf("failed to format result: %w", err)
 	}
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
-func (h *CollectionsHandler) UpdateCollection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, ok := request.Params.Arguments["name"].(string)
-	if !ok || name == "" {
-		return nil, fmt.Errorf("collection name is required")
+// UpdateByName updates a collection by name.
+func (h *CollectionHandler) UpdateByName(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	collectionName, ok := req.Params.Arguments["collection_name"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection_name is required")
 	}
 	var schema api.CollectionUpdateSchema
-	jsonData, err := json.Marshal(request.Params.Arguments["schema"])
+	jsonData, err := json.Marshal(req.Params.Arguments["schema"])
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal schema: %v", err)
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 	if err := json.Unmarshal(jsonData, &schema); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal collection update schema: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal collection update schema: %w", err)
 	}
-	result, err := h.typesenseService.UpdateCollection(ctx, name, &schema)
+	result, err := h.typesenseService.UpdateCollection(ctx, collectionName, &schema)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update collection '%s': %w", collectionName, err)
 	}
 	resultJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		logrus.Errorf("failed to marshal collection: %v", err)
-		return nil, fmt.Errorf("failed to format result: %v", err)
+		return nil, fmt.Errorf("failed to format result: %w", err)
 	}
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
-func (h *CollectionsHandler) DeleteCollection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, ok := request.Params.Arguments["name"].(string)
-	if !ok || name == "" {
-		return nil, fmt.Errorf("collection name is required")
+// DeleteByName deletes a collection by name.
+func (h *CollectionHandler) DeleteByName(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	collectionName, ok := req.Params.Arguments["collection_name"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection_name is required")
 	}
-	result, err := h.typesenseService.DeleteCollection(ctx, name)
+	result, err := h.typesenseService.DeleteCollection(ctx, collectionName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to delete collection '%s': %w", collectionName, err)
 	}
 	resultJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		logrus.Errorf("failed to marshal collection: %v", err)
-		return nil, fmt.Errorf("failed to format result: %v", err)
+		return nil, fmt.Errorf("failed to format result: %w", err)
 	}
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
