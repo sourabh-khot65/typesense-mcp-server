@@ -15,6 +15,10 @@ import (
 type TypesenseService interface {
 	Search(ctx context.Context, collection string, request *api.SearchCollectionParams) (*api.SearchResult, error)
 	GetCollections(ctx context.Context) ([]*api.CollectionResponse, error)
+	GetCollection(ctx context.Context, name string) (*api.CollectionResponse, error)
+	CreateCollection(ctx context.Context, schema *api.CollectionSchema) (*api.CollectionResponse, error)
+	UpdateCollection(ctx context.Context, name string, schema *api.CollectionUpdateSchema) (*api.CollectionResponse, error)
+	DeleteCollection(ctx context.Context, name string) (*api.CollectionResponse, error)
 }
 
 // typesenseService is a service that provides a client for Typesense
@@ -52,5 +56,41 @@ func (s *typesenseService) Search(ctx context.Context, collection string, reques
 		return nil, fmt.Errorf("failed to search documents in collection %s: %v", collection, err)
 	}
 
+	return result, nil
+}
+
+func (s *typesenseService) GetCollection(ctx context.Context, name string) (*api.CollectionResponse, error) {
+	result, err := s.client.Collection(name).Retrieve()
+	if err != nil {
+		logrus.Errorf("failed to get collection %s: %v", name, err)
+		return nil, fmt.Errorf("failed to get collection %s: %v", name, err)
+	}
+	return result, nil
+}
+
+func (s *typesenseService) CreateCollection(ctx context.Context, schema *api.CollectionSchema) (*api.CollectionResponse, error) {
+	result, err := s.client.Collections().Create(schema)
+	if err != nil {
+		logrus.Errorf("failed to create collection: %v", err)
+		return nil, fmt.Errorf("failed to create collection: %v", err)
+	}
+	return result, nil
+}
+
+func (s *typesenseService) UpdateCollection(ctx context.Context, name string, schema *api.CollectionUpdateSchema) (*api.CollectionResponse, error) {
+	result, err := s.client.Collection(name).Update(schema)
+	if err != nil {
+		logrus.Errorf("failed to update collection %s: %v", name, err)
+		return nil, fmt.Errorf("failed to update collection %s: %v", name, err)
+	}
+	return result, nil
+}
+
+func (s *typesenseService) DeleteCollection(ctx context.Context, name string) (*api.CollectionResponse, error) {
+	result, err := s.client.Collection(name).Delete()
+	if err != nil {
+		logrus.Errorf("failed to delete collection %s: %v", name, err)
+		return nil, fmt.Errorf("failed to delete collection %s: %v", name, err)
+	}
 	return result, nil
 }

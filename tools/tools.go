@@ -19,6 +19,7 @@ func RegisterTools(s *server.MCPServer) {
 
 	// Initialize handlers
 	searchHandler := handlers.NewSearchHandler(typesenseService)
+	collectionsHandler := handlers.NewCollectionsHandler(typesenseService)
 
 	collectionsTool := mcp.NewTool("typesense_collections",
 		mcp.WithDescription("Get all collections with their details such as schema etc. from Typesense"),
@@ -56,4 +57,29 @@ func RegisterTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(searchTool, searchHandler.SearchInTypesenseCollection)
+
+	getCollectionTool := mcp.NewTool("typesense_get_collection",
+		mcp.WithDescription("Get a Typesense collection by name."),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the collection.")),
+	)
+	s.AddTool(getCollectionTool, collectionsHandler.GetCollection)
+
+	createCollectionTool := mcp.NewTool("typesense_create_collection",
+		mcp.WithDescription("Create a new Typesense collection."),
+		mcp.WithObject("schema", mcp.Required(), mcp.Description("Collection schema as per Typesense API.")),
+	)
+	s.AddTool(createCollectionTool, collectionsHandler.CreateCollection)
+
+	updateCollectionTool := mcp.NewTool("typesense_update_collection",
+		mcp.WithDescription("Update a Typesense collection by name."),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the collection.")),
+		mcp.WithObject("schema", mcp.Required(), mcp.Description("Collection update schema as per Typesense API.")),
+	)
+	s.AddTool(updateCollectionTool, collectionsHandler.UpdateCollection)
+
+	deleteCollectionTool := mcp.NewTool("typesense_delete_collection",
+		mcp.WithDescription("Delete a Typesense collection by name."),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Name of the collection.")),
+	)
+	s.AddTool(deleteCollectionTool, collectionsHandler.DeleteCollection)
 }
