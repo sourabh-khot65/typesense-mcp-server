@@ -37,49 +37,95 @@ type SearchResponse struct {
 func (h *SearchHandler) GetTypesenseCollections(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	collections, err := h.typesenseService.GetCollections(ctx)
 	if err != nil {
-		logrus.Errorf("failed to get collections: %v", err)
-		return nil, fmt.Errorf("failed to get collections: %v", err)
+		return h.handleError("failed to get collections", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("%v", collections)), nil
+	collectionsJSON, err := json.MarshalIndent(collections, "", "  ")
+	if err != nil {
+		return h.handleError("failed to marshal collections", err)
+	}
+
+	return mcp.NewToolResultText(string(collectionsJSON)), nil
 }
 
-// Search handles the search request for any Typesense collection
+// SearchInTypesenseCollection handles the search request for any Typesense collection
 func (h *SearchHandler) SearchInTypesenseCollection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Extract collection name from arguments
-	collection, ok := request.Params.Arguments["collection"].(string)
-	if !ok {
-		return nil, fmt.Errorf("collection name is required")
+	// Extract and validate collection name
+	collection, err := h.extractCollectionName(request)
+	if err != nil {
+		return nil, err
 	}
 
-	// Create search parameters
-	var searchReq api.SearchCollectionParams
-	jsonData, err := json.Marshal(request.Params.Arguments)
+	// Build search parameters from request
+	searchReq, err := h.buildSearchRequest(request)
+	if err != nil {
+		return h.handleError("failed to build search request", err)
+	}
+
+	// Perform search
+	response, err := h.performSearch(ctx, collection, searchReq)
+	if err != nil {
+		return h.handleError(fmt.Sprintf("search failed for collection %s", collection), err)
+	}
+
+	// Format and return response
+	return h.formatSearchResponse(response)
+}
+
+// extractCollectionName extracts and validates the collection name from the request
+func (h *SearchHandler) extractCollectionName(request mcp.CallToolRequest) (string, error) {
+	collection, ok := request.Params.Arguments["collection"].(string)
+	if !ok || collection == "" {
+		return "", fmt.Errorf("collection name is required and must be a non-empty string")
+	}
+	return collection, nil
+}
+
+// buildSearchRequest creates a SearchCollectionParams from the MCP request
+func (h *SearchHandler) buildSearchRequest(request mcp.CallToolRequest) (*api.SearchCollectionParams, error) {
+	// Remove the collection field from arguments as it's not part of the search params
+	searchArgs := make(map[string]interface{})
+	for key, value := range request.Params.Arguments {
+		if key != "collection" {
+			searchArgs[key] = value
+		}
+	}
+
+	// Convert to SearchCollectionParams
+	jsonData, err := json.Marshal(searchArgs)
 	if err != nil {
 		logrus.Errorf("failed to marshal search arguments: %v", err)
-		return nil, fmt.Errorf("failed to marshal arguments: %v", err)
+		return nil, fmt.Errorf("failed to marshal search arguments: %w", err)
 	}
 
+	var searchReq api.SearchCollectionParams
 	if err := json.Unmarshal(jsonData, &searchReq); err != nil {
 		logrus.Errorf("failed to unmarshal search request: %v", err)
-		return nil, fmt.Errorf("failed to unmarshal search request: %v", err)
+		return nil, fmt.Errorf("failed to parse search parameters: %w", err)
 	}
 
-	// Perform search using Typesense
-	response, err := h.typesenseService.Search(ctx, collection, &searchReq)
+	return &searchReq, nil
+}
+
+// performSearch executes the search against Typesense
+func (h *SearchHandler) performSearch(ctx context.Context, collection string, searchReq *api.SearchCollectionParams) (*api.SearchResult, error) {
+	response, err := h.typesenseService.Search(ctx, collection, searchReq)
 	if err != nil {
 		logrus.Errorf("failed to search documents in collection %s: %v", collection, err)
-		return nil, fmt.Errorf("search failed: %v", err)
+		return nil, err
 	}
+	return response, nil
+}
 
+// formatSearchResponse formats the search result and returns it as a tool result
+func (h *SearchHandler) formatSearchResponse(response *api.SearchResult) (*mcp.CallToolResult, error) {
 	// Format the response
 	result := formatTypesenseResults(response)
 
 	// Convert to JSON string with indentation for better readability
 	resultJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		logrus.Errorf("failed to marshal search results: %v", err)
-		return nil, fmt.Errorf("failed to format results: %v", err)
+		return h.handleError("failed to format search results", err)
 	}
 
 	return mcp.NewToolResultText(string(resultJSON)), nil
@@ -87,38 +133,82 @@ func (h *SearchHandler) SearchInTypesenseCollection(ctx context.Context, request
 
 // formatTypesenseResults formats the Typesense search response
 func formatTypesenseResults(response *api.SearchResult) *SearchResponse {
-	if response == nil || response.Found == nil {
+	if response == nil {
 		return &SearchResponse{
 			Found:     0,
 			Page:      1,
-			PerPage:   10,
+			PerPage:   0,
 			Documents: make([]map[string]interface{}, 0),
 		}
 	}
 
-	// Format documents
-	documents := make([]map[string]interface{}, 0)
-	if response.Hits != nil {
-		for _, hit := range *response.Hits {
-			if hit.Document != nil {
-				doc := *hit.Document
-				// Add search score to document
-				if hit.TextMatch != nil {
-					doc["_text_match"] = *hit.TextMatch
-				}
-				if hit.Highlights != nil {
-					doc["_highlights"] = hit.Highlights
-				}
-				documents = append(documents, doc)
-			}
-		}
+	// Extract and format documents
+	documents := extractDocuments(response)
+
+	found := 0
+	if response.Found != nil {
+		found = *response.Found
+	}
+
+	var facetCounts []api.FacetCounts
+	if response.FacetCounts != nil {
+		facetCounts = *response.FacetCounts
 	}
 
 	return &SearchResponse{
-		Found:      *response.Found,
+		Found:      found,
 		Page:       1, // Typesense uses offset-based pagination
 		PerPage:    len(documents),
 		Documents:  documents,
-		FacetCount: *response.FacetCounts,
+		FacetCount: facetCounts,
 	}
+}
+
+// handleError provides consistent error handling and logging
+func (h *SearchHandler) handleError(message string, err error) (*mcp.CallToolResult, error) {
+	logrus.Errorf("%s: %v", message, err)
+	return nil, fmt.Errorf("%s: %w", message, err)
+}
+
+// extractDocuments safely extracts and enriches documents from search hits
+func extractDocuments(response *api.SearchResult) []map[string]interface{} {
+	documents := make([]map[string]interface{}, 0)
+	
+	if response.Hits == nil {
+		return documents
+	}
+
+	for _, hit := range *response.Hits {
+		doc := extractDocument(hit)
+		if doc != nil {
+			documents = append(documents, doc)
+		}
+	}
+
+	return documents
+}
+
+// extractDocument safely extracts a single document from a search hit
+func extractDocument(hit api.SearchResultHit) map[string]interface{} {
+	if hit.Document == nil {
+		return nil
+	}
+
+	doc := make(map[string]interface{})
+	
+	// Copy original document data
+	for key, value := range *hit.Document {
+		doc[key] = value
+	}
+
+	// Add search metadata if available
+	if hit.TextMatch != nil && *hit.TextMatch > 0 {
+		doc["_text_match"] = *hit.TextMatch
+	}
+	
+	if hit.Highlights != nil && len(*hit.Highlights) > 0 {
+		doc["_highlights"] = *hit.Highlights
+	}
+
+	return doc
 }
